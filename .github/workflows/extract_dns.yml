@@ -20,7 +20,7 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install setuptools rdbtools
+          python -m pip install pyredis-rdb-tools
 
       - name: Parse redis_dns_v2.rdb and extract domains
         run: |
@@ -39,10 +39,9 @@ jobs:
                   domains = re.findall(r'([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}', value)
                   self.domains.update(domains)
 
-          with open('output/redis_dns_v2.rdb', 'rb') as rdb_file:
-              callback = DNSCallback(rdb_file, 64)
-              parser = RdbParser(callback)
-              parser.parse('output/redis_dns_v2.rdb')  # 修复此处
+          callback = DNSCallback(None, 64)
+          parser = RdbParser(callback)
+          parser.parse('output/redis_dns_v2.rdb')  # 传入文件路径
 
           with open('rule/dns_rules.txt', 'w') as output_file:
               output_file.write("\\n".join(sorted(callback.domains)))
