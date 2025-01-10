@@ -29,8 +29,8 @@ jobs:
           import re
 
           class DNSCallback(MemoryCallback):
-              def __init__(self):
-                  super().__init__()
+              def __init__(self, stream, architecture):
+                  super().__init__(stream, architecture)
                   self.domains = set()
 
               def set(self, key, value, expiry, info):
@@ -39,10 +39,10 @@ jobs:
                   domains = re.findall(r'([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}', value)
                   self.domains.update(domains)
 
-          callback = DNSCallback()
-          parser = RdbParser(callback)
           with open('output/redis_dns_v2.rdb', 'rb') as rdb_file:
-              parser.parse(rdb_file)
+              callback = DNSCallback(rdb_file, 64)
+              parser = RdbParser(callback)
+              parser.parse()
 
           with open('rule/dns_rules.txt', 'w') as output_file:
               output_file.write("\\n".join(sorted(callback.domains)))
