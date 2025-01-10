@@ -42,7 +42,7 @@ jobs:
           with open('output/redis_dns_v2.rdb', 'rb') as rdb_file:
               callback = DNSCallback(rdb_file, 64)
               parser = RdbParser(callback)
-              parser.parse()
+              parser.parse('output/redis_dns_v2.rdb')  # 修复此处
 
           with open('rule/dns_rules.txt', 'w') as output_file:
               output_file.write("\\n".join(sorted(callback.domains)))
