@@ -12,16 +12,41 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y redis-tools
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
 
-      - name: Parse redis_dns_v2.rdb
+      - name: Install Python dependencies
         run: |
-          mkdir -p output
-          redis-check-dump output/redis_dns_v2.rdb > output/dns_content.txt
-          grep -Eo '([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}' output/dns_content.txt | sort -u > rule/dns_rules.txt
+          python -m pip install --upgrade pip
+          python -m pip install rdbtools
+
+      - name: Parse redis_dns_v2.rdb and extract domains
+        run: |
+          python << EOF
+          from rdbtools import RdbParser, MemoryCallback
+          import re
+
+          class DNSCallback(MemoryCallback):
+              def __init__(self):
+                  super().__init__()
+                  self.domains = set()
+
+              def set(self, key, value, expiry, info):
+                  if isinstance(value, bytes):
+                      value = value.decode('utf-8')
+                  domains = re.findall(r'([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}', value)
+                  self.domains.update(domains)
+
+          callback = DNSCallback()
+          parser = RdbParser(callback)
+          with open('output/redis_dns_v2.rdb', 'rb') as rdb_file:
+              parser.parse(rdb_file)
+
+          with open('rule/dns_rules.txt', 'w') as output_file:
+              output_file.write("\\n".join(sorted(callback.domains)))
+          EOF
 
       - name: Output DNS Rules
         run: cat rule/dns_rules.txt
