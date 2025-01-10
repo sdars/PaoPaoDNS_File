@@ -1,0 +1,27 @@
+name: Extract DNS
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  extract-dns:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y redis-tools
+
+      - name: Parse redis_dns_v2.rdb
+        run: |
+          mkdir -p output
+          redis-check-dump output/redis_dns_v2.rdb > output/dns_content.txt
+          grep -Eo '([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}' output/dns_content.txt | sort -u > rule/dns_rules.txt
+
+      - name: Output DNS Rules
+        run: cat rule/dns_rules.txt
